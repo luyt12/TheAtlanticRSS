@@ -1,7 +1,7 @@
 """
 Email sender with HTML formatting
 """
-import os, sys, re, smtplib, ssl, markdown
+import os, sys, re, smtplib, ssl, markdown, logging
 from datetime import datetime
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
