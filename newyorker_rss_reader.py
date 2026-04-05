@@ -124,10 +124,10 @@ def main():
         print("All today articles already sent")
         return None
 
-    # Step 2: 鎴彇鏁伴噺涓婇檺锛堟渶鏂扮殑鍦ㄥ墠锛?    top = candidates[:MAX_DAILY]
+    # Step 2: Limit article count (newest first)
     print("Limited to " + str(len(top)) + " articles")
 
-    # Step 3: 鎶撳彇鍐呭锛堟瘡绡囬檮涓婂彲閫夌殑鍏ㄦ枃锛?    for i, article in enumerate(top):
+    # Step 3: Fetch content (optional full content for each)
         print(f"  Fetching content ({i+1}/{len(top)}): {article['title']}")
         full = fetch_full_content(article["link"])
         if full:
