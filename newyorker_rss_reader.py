@@ -88,7 +88,7 @@ def format_single(article):
 
 
 def fetch_full_content(url):
-    """鎶撳彇鏂囩珷瀹屾暣鍐呭锛堝彲閫夛紝鐢ㄤ簬涓板瘜鎽樿锛?""
+    """Fetch full article content (optional, for richer summary)"""
     try:
         headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"}
         resp = requests.get(url, headers=headers, timeout=15)
