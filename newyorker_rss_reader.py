@@ -137,7 +137,7 @@ def main():
         else:
             article["full_content"] = article["summary"]
 
-    # Step 4: 淇濆瓨姣忕瘒涓虹嫭绔嬫枃浠?    today_str = datetime.now(TZ).strftime("%Y%m%d")
+    # Step 4: Save each article as independent file
     saved = []
     for i, article in enumerate(top):
         filename = today_str + "_art" + str(i + 1) + ".md"
