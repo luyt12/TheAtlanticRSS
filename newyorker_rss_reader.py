@@ -128,7 +128,7 @@ def main():
     print("Limited to " + str(len(top)) + " articles")
 
     # Step 3: Fetch content (optional full content for each)
-        print(f"  Fetching content ({i+1}/{len(top)}): {article['title']}")
+    for i, article in enumerate(top):
         full = fetch_full_content(article["link"])
         if full:
             article["full_content"] = full
