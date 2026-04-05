@@ -118,6 +118,7 @@ def main():
         return None
 
     # Step 1: Deduplicate against sent URLs
+    candidates = [e for e in today_entries if e["link"] not in sent_urls]
     print("After dedup: " + str(len(candidates)) + " candidates")
 
     if not candidates:
