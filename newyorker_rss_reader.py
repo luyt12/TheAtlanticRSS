@@ -138,6 +138,7 @@ def main():
             article["full_content"] = article["summary"]
 
     # Step 4: Save each article as independent file
+    today_str = datetime.now(TZ).strftime("%Y%m%d")
     saved = []
     for i, article in enumerate(top):
         filename = today_str + "_art" + str(i + 1) + ".md"
