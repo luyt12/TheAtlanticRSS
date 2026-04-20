@@ -2,7 +2,7 @@ name: Daily New Yorker Email
 
 on:
   schedule:
-    - cron: '0 3 * * *'
+    - cron: '0 13 * * *'
   workflow_dispatch:
 
 env:
