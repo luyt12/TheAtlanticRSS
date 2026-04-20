@@ -1,4 +1,4 @@
-name: Daily New Yorker Email
+﻿name: Daily New Yorker Email
 
 on:
   schedule:
@@ -26,6 +26,8 @@ env:
   SMTP_PORT: ${{ secrets.SMTP_PORT }}
   SMTP_USER: ${{ secrets.SMTP_USER }}
   SMTP_PASS: ${{ secrets.SMTP_PASS }}
+  BAIDU_APPID: ${{ secrets.BAIDU_APPID }}
+  BAIDU_SECRET_KEY: ${{ secrets.BAIDU_SECRET_KEY }}
 
 jobs:
   send-email:
