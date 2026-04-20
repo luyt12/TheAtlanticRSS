@@ -5,7 +5,8 @@ Logic:
   1. Try today's articles (NY timezone)
   2. Fall back to yesterday's if today=0
   3. Deduplicate against sent_articles.json
-  4. Return at most MAX_DAILY articles (oldest first so newer ones fit within limit)
+  4. Return at most MAX_DAILY articles (newest first)
+  5. backfill mode: fetch from N days ago; latest mode: fetch latest N articles regardless of date
 """
 import os
 import re
@@ -62,17 +63,10 @@ def fetch_full_content(url):
         return None
 
 
-def parse(xml, days_back=0):
-    """
-    Parse RSS XML and return articles published on the target date.
-    days_back=0 → today, days_back=1 → yesterday, etc.
-    """
+def parse_rss(xml):
+    """Parse RSS and return list of entry dicts with pub_dt."""
     feed = feedparser.parse(xml)
     now = datetime.now(TZ)
-    if days_back > 0:
-        target_date = (now - timedelta(days=days_back)).strftime("%Y-%m-%d")
-    else:
-        target_date = now.strftime("%Y-%m-%d")
 
     entries = []
     for e in feed.entries:
@@ -80,10 +74,12 @@ def parse(xml, days_back=0):
         link = e.get("link", "#").strip()
         pub = e.get("published_parsed") or e.get("updated_parsed")
         pub_str = "unknown"
+        pub_dt = None
         if pub:
             try:
                 dt = datetime(*pub[:6], tzinfo=TZ)
                 pub_str = dt.strftime("%Y-%m-%d")
+                pub_dt = dt
             except Exception:
                 pass
 
@@ -98,17 +94,26 @@ def parse(xml, days_back=0):
             "link": link,
             "published": pub_str,
             "summary": summary.strip(),
-            "target": pub_str == target_date,
-            "pub_dt": pub_str,
+            "pub_dt": pub_dt,
         })
+    return entries
 
-    matched = [x for x in entries if x["target"]]
-    date_label = "today" if days_back == 0 else f"{days_back} day(s) back"
-    print(f"Total RSS entries: {len(entries)} | {date_label}: {len(matched)}")
+
+def filter_by_date(entries, days_back):
+    """Filter entries to those published on target date (0=today, 1=yesterday, ...)."""
+    now = datetime.now(TZ)
+    if days_back > 0:
+        target = (now - timedelta(days=days_back)).strftime("%Y-%m-%d")
+    else:
+        target = now.strftime("%Y-%m-%d")
+
+    matched = [e for e in entries if e["published"] == target]
+    label = "today" if days_back == 0 else f"{days_back} day(s) back"
+    print(f"Total RSS entries: {len(entries)} | {label}: {len(matched)}")
     return matched
 
 
-def format_single(article, date_prefix):
+def format_single(article):
     lines = []
     lines.append("## " + article["title"])
     lines.append("")
@@ -120,11 +125,11 @@ def format_single(article, date_prefix):
     return "\n".join(lines)
 
 
-def main(days_back=0):
+def main(days_back=0, latest=False):
     """
-    Main entry point.
-    days_back=0: today's articles (with yesterday fallback)
-    days_back=N: fetch from N days ago
+    Args:
+      days_back: fetch articles from N days ago (0=today)
+      latest: ignore date filter, take the latest MAX_DAILY from RSS
     Returns list of (filepath, url) tuples.
     """
     setup()
@@ -133,50 +138,46 @@ def main(days_back=0):
     print("Already sent: " + str(len(sent_urls)) + " articles in sent_articles.json")
 
     xml = fetch()
+    entries = parse_rss(xml)
 
-    # Try target date; if 0 articles and days_back=0, fall back to yesterday
-    matched = parse(xml, days_back)
-    if not matched and days_back == 0:
-        matched = parse(xml, days_back=1)
-        if matched:
-            print("No today articles — using yesterday's articles")
+    if latest:
+        # Take latest MAX_DAILY, skip already-sent
+        print(f"LATEST mode: taking latest {MAX_DAILY} articles from RSS")
+        remaining = [e for e in entries if e["link"] not in sent_urls]
+        top = remaining[:MAX_DAILY]
+    else:
+        matched = filter_by_date(entries, days_back)
+        if not matched and days_back == 0:
+            matched = filter_by_date(entries, days_back=1)
+            if matched:
+                print("No today articles — using yesterday's articles")
+        if not matched:
+            print("No articles found for target date.")
+            return None
 
-    if not matched:
-        print("No articles found for target date.")
-        return None
+        candidates = [e for e in matched if e["link"] not in sent_urls]
+        print("After dedup: " + str(len(candidates)) + " candidates")
+        if not candidates:
+            print("All target-date articles already sent. Nothing new.")
+            return None
 
-    # Deduplicate
-    candidates = [e for e in matched if e["link"] not in sent_urls]
-    print("After dedup against sent_articles.json: " + str(len(candidates)) + " candidates")
+        candidates.sort(key=lambda x: x["pub_dt"] or "", reverse=True)
+        top = candidates[:MAX_DAILY]
 
-    if not candidates:
-        print("All target-date articles already sent. Nothing new.")
-        return None
+    print("Selected " + str(len(top)) + " articles")
 
-    # Sort newest first, then keep only top MAX_DAILY
-    # (RSS entries are usually newest-first; sort explicitly)
-    candidates.sort(key=lambda x: x["pub_dt"], reverse=True)
-    top = candidates[:MAX_DAILY]
-    print("Limited to top " + str(len(top)) + " articles for this email")
-
-    # Fetch full content
     for article in top:
         full = fetch_full_content(article["link"])
-        if full:
-            article["full_content"] = full
-        else:
-            article["full_content"] = article["summary"]
+        article["full_content"] = full or article["summary"]
 
-    # Save each article
     today_str = datetime.now(TZ).strftime("%Y%m%d")
+    suffix = "_latest" if latest else (f"_d{days_back}" if days_back > 0 else "")
     saved = []
     for i, article in enumerate(top):
-        # For test/historical runs, prefix with date context
-        suffix = f"_d{days_back}" if days_back > 0 else ""
         filename = today_str + suffix + "_art" + str(i + 1) + ".md"
         filepath = os.path.join(ARTICLES_DIR, filename)
         with open(filepath, "w", encoding="utf-8") as f:
-            f.write(format_single(article, today_str))
+            f.write(format_single(article))
         print("Saved: " + filepath)
         saved.append((filepath, article["link"]))
 
@@ -186,11 +187,15 @@ def main(days_back=0):
 
 if __name__ == "__main__":
     import sys
-    days = 0
+    days_back = 0
+    latest = False
     if len(sys.argv) > 1:
-        try:
-            days = int(sys.argv[1])
-        except ValueError:
-            print("Usage: python newyorker_rss_reader.py [days_back]")
-            sys.exit(1)
-    main(days_back=days)
+        if sys.argv[1] == "latest":
+            latest = True
+        else:
+            try:
+                days_back = int(sys.argv[1])
+            except ValueError:
+                print("Usage: python newyorker_rss_reader.py [days_back|latest]")
+                sys.exit(1)
+    main(days_back=days_back, latest=latest)
