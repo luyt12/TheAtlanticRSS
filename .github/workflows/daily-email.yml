@@ -1,4 +1,4 @@
-﻿name: Daily New Yorker Email
+name: Daily New Yorker Email
 
 on:
   schedule:
@@ -39,11 +39,11 @@ jobs:
       - run: pip install -r requirements.txt
       - name: Run daily task
         run: |
-          MODE="${{ github.event.inputs.mode || ''normal'' }}"
-          if [ "$MODE" = "latest" ]; then
+          MODE="${{ github.event.inputs.mode }}"
+          if [ "" = "latest" ]; then
             python daily_task.py latest
-          elif [ "$MODE" = "backfill" ]; then
-            python daily_task.py backfill ${{ github.event.inputs.days || ''1'' }}
+          elif [ "" = "backfill" ]; then
+            python daily_task.py backfill ${{ github.event.inputs.days || '1' }}
           else
             python daily_task.py
           fi
