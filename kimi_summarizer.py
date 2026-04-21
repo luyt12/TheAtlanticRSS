@@ -10,7 +10,7 @@ import requests
 import time
 
 logging.basicConfig(level=logging.INFO,
-                    format=''%(asctime)s - %(levelname)s - %(message)s'')
+                    format="%(asctime)s - %(levelname)s - %(message)s")
 
 KIMI_API_KEY  = os.getenv("kimi_API_KEY")
 KIMI_MODEL    = os.getenv("KIMI_MODEL", "moonshotai/kimi-k2.5")
@@ -124,7 +124,7 @@ def baidu_fallback(text):
             data = resp.json()
 
             if data.get("error_code"):
-                logging.error(f"[BAIDU] API error: {data.get(''error_code'')} - {data.get(''error_msg'', '''')}")
+                logging.error(f"[BAIDU] API error: {data.get('error_code')} - {data.get('error_msg', '')}")
                 if attempt < 2:
                     time.sleep(5)
                 continue
