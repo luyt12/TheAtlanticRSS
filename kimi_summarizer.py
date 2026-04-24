@@ -10,7 +10,7 @@ import time
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
-KIMI_API_KEY = os.getenv("kimi_API_KEY")
+KIMI_API_KEY = os.getenv("KIMI_API_KEY")
 KIMI_MODEL = os.getenv("KIMI_MODEL", "moonshotai/kimi-k2.5")
 KIMI_API_URL = os.getenv("KIMI_API_URL", "https://integrate.api.nvidia.com/v1/chat/completions")
 
